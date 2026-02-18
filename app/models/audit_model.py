@@ -1,36 +1,52 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON
+import uuid
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.core.database import Base
+import enum
+from app.core.database import Base, GUID
+
+class AuditAction(str, enum.Enum):
+    """Padroniza os tipos de eventos rastreados pelo sistema."""
+    CREATE = "CREATE"            # Criação de registro
+    UPDATE = "UPDATE"            # Atualização de dados
+    DELETE = "DELETE"            # Remoção (lógica ou física)
+    LOGIN = "LOGIN"              # Acesso ao sistema
+    LOGOUT = "LOGOUT"            # Saída
+    APPROVE = "APPROVE"          # Curadoria (Admin aprovou produto)
+    REJECT = "REJECT"            # Curadoria (Admin rejeitou)
+    SYSTEM_EVENT = "SYSTEM_EVENT" # Rotinas automáticas (Ex: Cron jobs)
 
 class AuditLog(Base):
     """
     O 'Gravador de Voo' (Caixa Preta) do sistema.
-    Registra alterações críticas para segurança e resolução de disputas.
+    Registra alterações críticas para segurança, compliance (LGPD) e resolução de disputas.
     """
     __tablename__ = "audit_logs"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(GUID, primary_key=True, default=uuid.uuid4, index=True)
     
     # Onde ocorreu a mudança?
     table_name = Column(String(50), nullable=False, index=True) # Ex: "producer_products"
-    record_id = Column(Integer, nullable=False, index=True)     # ID do registro afetado
+    record_id = Column(Integer, nullable=False, index=True)     # ID da linha afetada
     
     # Qual foi a ação?
-    action = Column(String(20), nullable=False) # CREATE, UPDATE, DELETE, LOGIN, APPROVE
+    action = Column(Enum(AuditAction), nullable=False, index=True) 
     
     # Quem fez a mudança?
-    actor_id = Column(Integer, ForeignKey("users.id"), nullable=True) # Pode ser Null se for o Sistema
-    ip_address = Column(String(45), nullable=True) # IPv4 ou IPv6 (Segurança)
-    user_agent = Column(String(255), nullable=True) # Navegador/Dispositivo usado
+    # Nullable=True pois pode ser uma ação do sistema (Cron job) ou usuário anônimo (Login falho)
+    actor_id = Column(GUID, ForeignKey("users.id"), nullable=True) 
     
-    # O "Antes" e o "Depois" (Poderoso!)
-    # Usamos JSON para guardar apenas os campos que mudaram
-    # Ex: old_values = {"price": 5.00}, new_values = {"price": 2.00}
-    old_values = Column(JSON, nullable=True)
-    new_values = Column(JSON, nullable=True)
+    # Contexto da Requisição (Rastreabilidade Técnica)
+    ip_address = Column(String(45), nullable=True) # Suporta IPv4 e IPv6
+    user_agent = Column(String(255), nullable=True) # Dispositivo/Navegador usado
     
+    # O "Antes" e o "Depois" (O Delta)
+    # Ex: old_values={"price": 10.0}, new_values={"price": 12.0}
+    old_values = Column(JSON, nullable=True) #
+    new_values = Column(JSON, nullable=True) #
+    
+    # Quando?
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Relacionamento (Opcional, apenas para facilitar queries de quem fez a ação)
-    actor = relationship("User")
+    # Relacionamentos
+    actor = relationship("User") # Apenas para leitura fácil do responsável

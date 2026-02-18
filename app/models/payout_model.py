@@ -1,37 +1,60 @@
-# Arquivo: app/models/payout_model.py
-
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Numeric, Text
+import uuid
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Numeric, Text, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.core.database import Base
+import enum
+from app.core.database import Base, GUID
+
+class PayoutStatus(str, enum.Enum):
+    """Ciclo de vida do repasse ao produtor."""
+    SCHEDULED = "SCHEDULED"  # Agendado (ex: D+1, D+15)
+    PROCESSING = "PROCESSING" # Enviado ao banco, aguardando confirmação
+    PAID = "PAID"            # Dinheiro na conta do produtor (Sucesso)
+    FAILED = "FAILED"        # Banco rejeitou (Chave inválida, etc)
+    CANCELLED = "CANCELLED"  # Cancelado manualmente (Erro operacional)
 
 class Payout(Base):
     """
-    Registra a saída de dinheiro da Plataforma para o Produtor.
-    Fundamental para o Livro Caixa da empresa.
+    Registro de Saída de Caixa (Outflow).
+    Representa a transferência de valores da Plataforma para o Produtor.
+    Fundamental para o Livro Caixa e Auditoria Fiscal.
     """
     __tablename__ = "payouts"
 
-    id = Column(Integer, primary_key=True, index=True)
-    order_id = Column(Integer, ForeignKey("orders.id"), unique=True, nullable=False)
-    producer_id = Column(Integer, ForeignKey("producer_profiles.id"), nullable=False)
+    id = Column(GUID, primary_key=True, default=uuid.uuid4, index=True)
     
-    # Valores
-    amount_transferred = Column(Numeric(10, 2), nullable=False) # Valor Líquido (Já descontada a taxa)
+    # Vínculos
+    order_id = Column(GUID, ForeignKey("orders.id"), unique=True, nullable=False)
+    producer_id = Column(GUID, ForeignKey("producer_profiles.id"), nullable=False)
     
-    # Dados da Transação Bancária (Rastro do Dinheiro)
-    source_bank_account = Column(String(100), nullable=True) # Ex: "Nubank - Conta PJ Final 4402"
-    target_pix_key = Column(String(100), nullable=False) # Chave usada (Snapshot, caso o produtor mude depois)
+    # Máquina de Estados
+    status = Column(Enum(PayoutStatus), default=PayoutStatus.SCHEDULED, index=True)
     
-    transaction_date = Column(DateTime(timezone=True), nullable=False) # Data/Hora real da transferência bancária
+    # --- Valores Monetários (A Matemática do Repasse) ---
+    # Guardamos os valores aqui para não depender de recálculos no Order
+    amount_gross = Column(Numeric(10, 2), nullable=False) # Valor da Venda (Ex: 100.00)
+    amount_fee = Column(Numeric(10, 2), nullable=False)   # Taxa da Plataforma (Ex: 10.00)
+    amount_net = Column(Numeric(10, 2), nullable=False)   # Valor Efetivo Transferido (Ex: 90.00)
     
-    # Comprovantes
-    proof_url = Column(String, nullable=False) # Upload do comprovante de transferência (PDF/JPG)
-    bank_transaction_id = Column(String(100), nullable=True) # ID da transação no extrato bancário (E2E ID do PIX)
+    # --- Dados Bancários (Snapshot) ---
+    # Gravamos a chave usada NA HORA DO PAGAMENTO. Se o produtor mudar depois, o histórico fica preservado.
+    target_pix_key_snapshot = Column(String(100), nullable=False) 
     
+    # --- Execução da Transação ---
+    scheduled_for = Column(DateTime(timezone=True), nullable=True) # Data prevista
+    processed_at = Column(DateTime(timezone=True), nullable=True)  # Data real da transferência
+    
+    # Comprovantes e Rastreabilidade
+    # bank_transaction_id é o "End-to-End ID" do PIX
+    bank_transaction_id = Column(String(100), unique=True, nullable=True, index=True) 
+    proof_url = Column(String, nullable=True) # URL do comprovante (PDF/Imagem)
+    
+    # Auditoria de Erros
+    failure_reason = Column(String(255), nullable=True) # Ex: "Chave PIX inexistente"
     notes = Column(Text, nullable=True) # Observações internas do Admin
     
-    created_at = Column(DateTime(timezone=True), server_default=func.now()) # Quando o registro foi criado no sistema
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relacionamentos
     order = relationship("Order", back_populates="payout")
