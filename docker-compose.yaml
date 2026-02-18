@@ -1,0 +1,18 @@
+
+version: '3.8'
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: {project_name}_db
+    restart: always
+    environment:
+      - POSTGRES_USER={project_name}_user
+      - POSTGRES_PASSWORD={project_name}_pass
+      - POSTGRES_DB={project_name}
+    ports:
+      - "5433:5432" # <--- MUDAR AQUI (A porta externa não deve ser igual as anteriores)
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
