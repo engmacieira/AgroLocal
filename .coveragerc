@@ -1,0 +1,5 @@
+
+
+[run] source = app omit = app/tests/* app/core/* */init.py
+
+[report] show_missing = True 
