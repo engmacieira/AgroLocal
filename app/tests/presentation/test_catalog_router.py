@@ -95,3 +95,25 @@ def test_deve_listar_produtos_pendentes_para_admin_via_api(client):
     assert isinstance(lista_resp.json(), list)
     # Valida se o "Orégano" está na lista de pendentes devolvida
     assert any(p["name"] == "Orégano" for p in lista_resp.json())
+    
+def test_deve_buscar_produtos_textualmente_via_api(client):
+    # 1. Cria categoria e sugere produto
+    cat_resp = client.post("/catalog/categories/", json={"name": "Tubérculos"})
+    category_id = cat_resp.json()["id"]
+
+    sug_resp = client.post("/catalog/products/suggest", json={
+        "name": "Batata Doce", 
+        "category_id": category_id, 
+        "synonyms": "batata-doce roxa"
+    })
+    product_id = sug_resp.json()["id"]
+
+    # 2. Aprova produto para aparecer na busca
+    client.patch(f"/catalog/products/{product_id}/approve?admin_id={str(uuid.uuid4())}")
+
+    # 3. Busca por parte do sinônimo
+    busca_resp = client.get("/catalog/products/search?q=roxa")
+
+    assert busca_resp.status_code == 200
+    assert len(busca_resp.json()) >= 1
+    assert busca_resp.json()[0]["name"] == "Batata Doce"

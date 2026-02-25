@@ -7,7 +7,8 @@ from app.core.database import get_db
 from app.infrastructure.repositories.catalog_repository_impl import CategoryRepositoryImpl, GlobalProductRepositoryImpl
 from app.application.use_cases.catalog_management import (
     CreateCategoryUseCase, SuggestProductUseCase, SuggestProductDTO,
-    ApproveProductUseCase, RejectProductUseCase, GetProductsByCategoryUseCase, GetProductsByStatusUseCase
+    ApproveProductUseCase, RejectProductUseCase, GetProductsByCategoryUseCase, 
+    GetProductsByStatusUseCase, SearchCatalogUseCase
 )
 from app.presentation.schemas.catalog_schema import (
     CategoryCreateRequest, CategoryResponse,
@@ -33,6 +34,16 @@ def get_categories(db: Session = Depends(get_db)):
     return repo.get_all_active()
 
 # --- Rotas de Produto Global ---
+
+@router.get("/products/search", response_model=List[ProductResponse])
+def search_products(q: str, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """Busca produtos globais por nome ou sinônimo (Ex: q=macaxeira)."""
+    repo = GlobalProductRepositoryImpl(db)
+    use_case = SearchCatalogUseCase(repo)
+    try:
+        return use_case.execute(query=q, skip=skip, limit=limit)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.post("/products/suggest", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 def suggest_product(request: ProductSuggestRequest, db: Session = Depends(get_db)):

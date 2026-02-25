@@ -43,3 +43,8 @@ class IGlobalProductRepository(ABC):
     def get_by_category(self, category_id: UUID, skip: int = 0, limit: int = 100) -> List[GlobalProduct]:
         """Lista os produtos aprovados de uma categoria específica."""
         pass
+    
+    @abstractmethod
+    def search_by_text(self, query: str, skip: int = 0, limit: int = 100) -> List[GlobalProduct]:
+        """Busca textual no nome e nos sinônimos (Apenas APROVADOS)."""
+        pass

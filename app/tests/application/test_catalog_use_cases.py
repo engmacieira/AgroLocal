@@ -5,7 +5,7 @@ from app.domain.entities.catalog import Category, GlobalProduct, ProductStatus
 from app.domain.repositories.catalog_repository import ICategoryRepository, IGlobalProductRepository
 from app.application.use_cases.catalog_management import (
     CreateCategoryUseCase, SuggestProductUseCase, SuggestProductDTO,
-    ApproveProductUseCase, RejectProductUseCase
+    ApproveProductUseCase, RejectProductUseCase, SearchCatalogUseCase
 )
 
 # 1. Os Dublês de Testes (Fake Repositories)
@@ -50,6 +50,22 @@ class FakeGlobalProductRepository(IGlobalProductRepository):
 
     def get_by_category(self, category_id: uuid.UUID, skip: int = 0, limit: int = 100) -> List[GlobalProduct]:
         filtrados = [p for p in self.products if p.category_id == category_id and p.status == ProductStatus.APPROVED]
+        return filtrados[skip : skip + limit]
+    
+    def search_by_text(self, query: str, skip: int = 0, limit: int = 100) -> List[GlobalProduct]:
+        query_lower = query.lower()
+        filtrados = []
+        
+        for p in self.products:
+            # Regra: Só busca produtos APROVADOS
+            if p.status == ProductStatus.APPROVED:
+                # Verifica se a string existe no nome ou nos sinônimos (ignorando maiúsculas/minúsculas)
+                match_nome = query_lower in p.name.lower()
+                match_sinonimo = p.synonyms and query_lower in p.synonyms.lower()
+                
+                if match_nome or match_sinonimo:
+                    filtrados.append(p)
+                    
         return filtrados[skip : skip + limit]
 
 # 2. Testes dos Casos de Uso
@@ -114,3 +130,23 @@ def test_admin_deve_rejeitar_produto_com_motivo():
     use_case.execute(product_id=produto.id, admin_id=uuid.uuid4(), reason="Nome inválido/Ofensivo")
     
     assert produto.status == ProductStatus.REJECTED
+    
+def test_deve_buscar_produtos_por_texto_no_catalogo():
+    prod_repo = FakeGlobalProductRepository()
+    
+    produto = GlobalProduct(name="Mandioca", category_id=uuid.uuid4(), synonyms="macaxeira")
+    produto.status = ProductStatus.APPROVED
+    prod_repo.save(produto)
+
+    use_case = SearchCatalogUseCase(prod_repo)
+    resultados = use_case.execute(query="macaxeira")
+
+    assert len(resultados) == 1
+    assert resultados[0].name == "Mandioca"
+
+def test_nao_deve_buscar_com_query_muito_curta():
+    prod_repo = FakeGlobalProductRepository()
+    use_case = SearchCatalogUseCase(prod_repo)
+
+    with pytest.raises(ValueError, match="pelo menos 2 caracteres"):
+        use_case.execute(query="a")

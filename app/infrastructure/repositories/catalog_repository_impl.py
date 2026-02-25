@@ -1,5 +1,6 @@
 from typing import List, Optional
 from uuid import UUID
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from app.domain.entities.catalog import Category, GlobalProduct, ProductStatus
 from app.domain.repositories.catalog_repository import ICategoryRepository, IGlobalProductRepository
@@ -77,5 +78,16 @@ class GlobalProductRepositoryImpl(IGlobalProductRepository):
         models = self.db.query(GlobalProductModel).filter(
             GlobalProductModel.category_id == category_id,
             GlobalProductModel.status == ProductStatus.APPROVED
+        ).offset(skip).limit(limit).all()
+        return [self._to_domain(m) for m in models]
+    
+    def search_by_text(self, query: str, skip: int = 0, limit: int = 100) -> List[GlobalProduct]:
+        search_term = f"%{query}%"
+        models = self.db.query(GlobalProductModel).filter(
+            GlobalProductModel.status == ProductStatus.APPROVED,
+            or_(
+                GlobalProductModel.name.ilike(search_term),
+                GlobalProductModel.synonyms.ilike(search_term)
+            )
         ).offset(skip).limit(limit).all()
         return [self._to_domain(m) for m in models]

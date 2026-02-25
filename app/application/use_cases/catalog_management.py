@@ -102,3 +102,13 @@ class GetProductsByStatusUseCase:
 
     def execute(self, status: ProductStatus, skip: int = 0, limit: int = 100) -> List[GlobalProduct]:
         return self.product_repository.get_all_by_status(status, skip, limit)
+    
+class SearchCatalogUseCase:
+    """Caso de Uso: Produtor busca produtos globais por nome ou sinônimo."""
+    def __init__(self, product_repository: IGlobalProductRepository):
+        self.product_repository = product_repository
+
+    def execute(self, query: str, skip: int = 0, limit: int = 100) -> List[GlobalProduct]:
+        if not query or len(query.strip()) < 2:
+            raise ValueError("A busca deve ter pelo menos 2 caracteres")
+        return self.product_repository.search_by_text(query.strip(), skip, limit)
