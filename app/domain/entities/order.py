@@ -13,6 +13,7 @@ class OrderStatus(str, enum.Enum):
     PREPARING = "PREPARING"      # Em separação/colheita
     READY = "READY"              # Pronto para retirada/envio
     DELIVERED = "DELIVERED"      # Entregue (Finalizado)
+    COMPLETED = "COMPLETED"      # Repasse financeiro feito ao produtor
     CANCELED = "CANCELED"        # Cancelado (Exige justificativa)
 
 @dataclass(kw_only=True)
@@ -113,3 +114,10 @@ class Order:
             raise ValueError("A taxa de entrega não pode ser negativa")
         self.delivery_fee = fee
         self._recalculate_total()
+        
+    def mark_as_completed(self) -> None:
+        """Marca o pedido como totalmente concluído após o repasse financeiro."""
+        if self.status != OrderStatus.DELIVERED:
+            raise ValueError("Apenas pedidos entregues podem ser finalizados (COMPLETED)")
+        self.status = OrderStatus.COMPLETED
+        self.updated_at = datetime.now(timezone.utc)

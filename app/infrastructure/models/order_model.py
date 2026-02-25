@@ -34,6 +34,7 @@ class OrderModel(Base):
     
     # Usamos cascade delete-orphan para garantir que os itens vão junto com o pedido
     items = relationship("OrderItemModel", back_populates="order", cascade="all, delete-orphan")
+    payout = relationship("PayoutModel", back_populates="order", uselist=False, cascade="all, delete-orphan")
 
 class OrderItemModel(Base):
     """O registro imutável do item comprado (A Verdade Fiscal)."""
