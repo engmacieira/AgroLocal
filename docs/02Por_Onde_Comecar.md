@@ -4,10 +4,10 @@
 > Este arquivo é o seu Ponto de Restauração. Antes de processar qualquer novo prompt, analise este estado para garantir consistência com a sessão anterior.
 
 ## 📍 Estado Atual da Missão
-* **Fase do Projeto:** Desenvolvimento (Sprint 07).
-* **Sprint Atual:** Sprint 07 - Financeiro (Pagamentos/Repasses) e Avaliações (`Transaction`, `Payout`, `Review`).
-* **Última Ação Realizada:** Finalizamos 100% da Sprint 06. O sistema agora processa carrinhos de compras (Checkout), faz o split de pedidos por produtor, calcula o frete de maior valor, deduz o estoque, gera o Snapshot Fiscal (OrderItem) e gerencia a máquina de estados (CREATED -> PAID -> PREPARING -> READY -> DELIVERED).
-* **PRÓXIMO PASSO IMEDIATO:** Planejar o backlog da Sprint 07. Como rascunhado no modelo antigo do pedido, precisamos vincular o pedido pago a uma transação financeira (`Transaction`), calcular a taxa da plataforma (Split de Pagamento), preparar o repasse para o produtor (`Payout`) e permitir que o cliente deixe uma avaliação (`Review`) após a entrega.
+* **Fase do Projeto:** Desenvolvimento (Sprint 08).
+* **Sprint Atual:** Sprint 08 - Repasses Financeiros (`Payout`) e Avaliações (`Review`).
+* **Última Ação Realizada:** Finalizamos 100% da Sprint 07 (Inflow). O sistema agora agrupa múltiplos pedidos numa única Transação, gera o PIX unificado e processa Webhooks de aprovação que alteram o status dos pedidos para PAID em cascata.
+* **PRÓXIMO PASSO IMEDIATO:** Planejar o backlog da Sprint 08. Modelar a entidade `Payout` (Repasse), que vai calcular a "Platform Fee" (comissão do AgroLocal) e definir o valor líquido a ser transferido para o produtor após a venda. Na sequência, modelar a entidade `Review` para o cliente avaliar o pedido entregue.
 
 ## 🏗️ Definições Arquiteturais (Não Quebrar)
 * **Backend:** Python (FastAPI) + SQLAlchemy + DDD estrito.

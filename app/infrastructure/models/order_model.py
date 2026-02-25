@@ -29,6 +29,9 @@ class OrderModel(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relacionamentos
+    transaction_id = Column(GUID, ForeignKey("transactions.id"), nullable=True, index=True)
+    transaction = relationship("TransactionModel", back_populates="orders")
+    
     # Usamos cascade delete-orphan para garantir que os itens vão junto com o pedido
     items = relationship("OrderItemModel", back_populates="order", cascade="all, delete-orphan")
 
