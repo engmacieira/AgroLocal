@@ -9,6 +9,7 @@ from app.presentation.routers import order_router
 from app.presentation.routers import transaction_router
 from app.presentation.routers import payout_router
 from app.presentation.routers import review_router
+from app.presentation.routers import communication_router
 
 # Cria as tabelas no banco de dados local.
 # Em um cenário 100% focado em produção, usaríamos o Alembic para isso,
@@ -30,6 +31,7 @@ app.include_router(order_router.router)
 app.include_router(transaction_router.router)
 app.include_router(payout_router.router)
 app.include_router(review_router.router)
+app.include_router(communication_router.router)
 
 @app.get("/")
 def read_root():
