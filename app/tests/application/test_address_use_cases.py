@@ -26,6 +26,10 @@ class FakeAddressRepository(IAddressRepository):
     def get_by_user_id(self, user_id: uuid.UUID, skip: int = 0, limit: int = 100) -> List[Address]:
         return [a for a in self.addresses if a.user_id == user_id and a.is_active is True]
 
+    def get_all(self, skip: int = 0, limit: int = 100) -> List[Address]:
+        ativas = [a for a in self.addresses if a.is_active is True]
+        return ativas[skip : skip + limit]
+    
     def delete(self, address_id: uuid.UUID) -> None:
         address = self.get_by_id(address_id)
         if address:
